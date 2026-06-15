@@ -8,6 +8,7 @@ using System.Text;
 using Microsoft.VisualBasic.Logging;
 using System.Diagnostics;
 using static System.Formats.Asn1.AsnWriter;
+using System.Text.Json;
 
 namespace Projekt_zaawansowane_metody_obliczeniowe
 {
@@ -15,28 +16,43 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
     {
         volatile bool Active = true;
         volatile bool Stop = false;
-        BackgroundWorker bw;
+        //BackgroundWorker bw;
         private Stopwatch stoper = new Stopwatch();
 
         static string seq_opt = "";
         Random rnd = new Random();
         List<string> Instance = new List<String> { };
 
-        //PARAMETERS
+        //PARAMETRY
         int population_size = 100;
         int iteration_cycles_count = 200;
-        double mutation_probability = 0.01;
-        int number_of_extension_of_the_child = 5;
-        double number_of_parents_left_in_the_population = 0.2;
-        double reproductive_pressure = 2.0;
+        double mutation_probability = 0.0003;
+        int number_of_extension_of_the_child = 2;
+        double percent_of_parents_left_in_the_population = 0.25;
+        double reproductive_pressure = 15.0;
+        bool automatic_change_of_mutation_probability = true;
+        int downtime_length = 20;
+        double tmp_mutation_probability = 0.004;
 
-        //kod do testow
+        //dane do testow
+        public class TestInstance
+        {
+            public int M { get; set; }
+            public int N { get; set; }
+            public int NSeqOpt { get; set; }
+            public int ErrCount { get; set; }
+            public string GeneratorSolution { get; set; }
+            public List<string> Instance { get; set; }
+        }
+
         class GAResult
         {
             public string BestSolution = "";
             public int BestValue;
             public long TimeMs;
         }
+
+        private List<TestInstance> generatedTests = new List<TestInstance>();
 
         public Form1()
         {
@@ -52,7 +68,6 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
         {
             List<string> Instance_local = new List<string>();
             List<char> nucleotides = new List<char> { 'A', 'C', 'G', 'T' };
-
             List<char> seq = new List<char>();
 
             for (int j = 0; j < n_seq_opt; j++)
@@ -90,17 +105,11 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                 if (i == err_count - 1 || type_of_error == 0)
                 {
                     int id_to_change = rnd.Next(0, n);
-
                     char[] seq_with_error = Instance_local[los_seq].ToCharArray();
-
                     int los = rnd.Next(0, 4);
-
                     seq_with_error[id_to_change] = nucleotides[los];
-
                     string string_seq = new string(seq_with_error);
-
                     List<int> check_id = new List<int> { los_seq, id_to_change };
-
                     if (string_seq == Instance_local[los_seq] || changelog.Contains(check_id))
                     {
                         err_count++;
@@ -114,17 +123,11 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                 else
                 {
                     int id_to_change = rnd.Next(0, n - 1);
-
                     char[] seq_with_error = Instance_local[los_seq].ToCharArray();
-
                     char tmp = seq_with_error[id_to_change];
-
                     seq_with_error[id_to_change] = seq_with_error[id_to_change + 1];
-
                     seq_with_error[id_to_change + 1] = tmp;
-
                     string string_seq = new string(seq_with_error);
-
                     List<int> check_id1 = new List<int> { los_seq, id_to_change };
                     List<int> check_id2 = new List<int> { los_seq, id_to_change + 1 };
 
@@ -137,22 +140,18 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                     else
                     {
                         err_count--;
-
                         Instance_local[los_seq] = string_seq;
-
                         changelog.Add(new List<int> { los_seq, id_to_change });
                         changelog.Add(new List<int> { los_seq, id_to_change + 1 });
                     }
                 }
             }
-
             return (Instance_local, seq_opt_local);
         }
 
         private List<string> GeneratePopulation(List<string> Instance_local)
         {
             List<string> Population = new List<string>();
-
             for (int i = 0; i < population_size; i++)
             {
                 List<int> counter = Enumerable.Repeat(0, Instance_local.Count).ToList();
@@ -161,12 +160,9 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                 while (counter.Any(x => x < Instance_local[0].Length))
                 {
                     int los = rnd.Next(0, Instance_local.Count);
-
                     if (counter[los] >= Instance_local[los].Length)
                         continue;
-
                     char nucleotide = Instance_local[los][counter[los]];
-
                     entity.Add(nucleotide);
 
                     for (int j = 0; j < Instance_local.Count; j++)
@@ -178,10 +174,8 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                         }
                     }
                 }
-
                 Population.Add(new string(entity.ToArray()));
             }
-
             return Population;
         }
 
@@ -189,13 +183,10 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
         {
             Stopwatch sw = new Stopwatch();
             sw.Start();
-
             List<string> wPopulation = GeneratePopulation(Instance_local);
-
+            double w_mutation_probability = mutation_probability;
             HashSet<string> Best_results = new HashSet<string>();
-
             Best_results.Add(wPopulation[0]);
-
             int best_value = wPopulation[0].Length;
 
             for (int j = 0; j < wPopulation.Count; j++)
@@ -203,9 +194,7 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                 if (wPopulation[j].Length < best_value)
                 {
                     best_value = wPopulation[j].Length;
-
                     Best_results.Clear();
-
                     Best_results.Add(wPopulation[j].Trim());
                 }
                 else if (wPopulation[j].Length == best_value)
@@ -213,17 +202,12 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                     Best_results.Add(wPopulation[j].Trim());
                 }
             }
-
+            List<double> points_history = new List<double>();
             for (int i = 0; i <= iteration_cycles_count; i++)
             {
                 List<string> Parents = new List<string>(wPopulation);
-
                 wPopulation.Clear();
-
-                int staying_alive =
-                    (int)Math.Round(
-                        Parents.Count * number_of_parents_left_in_the_population,
-                        MidpointRounding.AwayFromZero);
+                int staying_alive = (int)Math.Round(Parents.Count * percent_of_parents_left_in_the_population, MidpointRounding.AwayFromZero);
 
                 for (int j = 0; j < staying_alive; j++)
                     wPopulation.Add(SelectParent(Parents));
@@ -232,33 +216,52 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                 {
                     string los1 = SelectParent(Parents);
                     string los2 = SelectParent(Parents);
-
                     if (los1 == los2)
                         continue;
-
                     string child = Reproduction(Instance_local, los1, los2);
-
                     if (child != "e")
                         wPopulation.Add(child);
                 }
-
                 int population_total_length = 0;
-
                 for (int j = 0; j < wPopulation.Count; j++)
                     population_total_length += wPopulation[j].Length;
 
-                int number_of_mutation =
-                    (int)Math.Round(
-                        population_total_length * mutation_probability,
-                        MidpointRounding.AwayFromZero);
+                //sprawdzenie czy nowe najlepsze rozwi¹zanie
+                for (int j = 0; j < wPopulation.Count; j++)
+                {
+                    if (wPopulation[j].Length < best_value)
+                    {
+                        Best_results.Clear();
+                        best_value = wPopulation[j].Length;
+                        Best_results.Add(wPopulation[j].Trim());
+                    }
+                    else if (wPopulation[j].Length == best_value && !Best_results.Contains(wPopulation[j]))
+                        Best_results.Add(wPopulation[j].Trim());
+                }
+
+                //sprawdzenie czy przestoj
+                if (automatic_change_of_mutation_probability)
+                {
+                    bool is_downtime = false;
+                    var points = points_history;
+                    if (points.Count >= downtime_length)
+                    {
+                        var last_ten = points.Skip(points.Count - downtime_length).ToList();
+                        double first_value_y = last_ten[0];
+                        is_downtime = last_ten.All(p => p == first_value_y);
+
+                        if (is_downtime)
+                            w_mutation_probability = tmp_mutation_probability;
+                    }
+                }
+
+                int number_of_mutation = (int)Math.Round(population_total_length * w_mutation_probability, MidpointRounding.AwayFromZero);
 
                 for (int j = 0; j < number_of_mutation; j++)
                 {
                     int los = rnd.Next(0, wPopulation.Count);
                     int los2 = rnd.Next(0, wPopulation[los].Length);
-
-                    List<int> counter =
-                        Enumerable.Repeat(0, Instance_local.Count).ToList();
+                    List<int> counter = Enumerable.Repeat(0, Instance_local.Count).ToList();
 
                     for (int k = 0; k < los2; k++)
                     {
@@ -288,8 +291,7 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                         continue;
                     }
 
-                    int los3 =
-                        NotFullInstance_locals[rnd.Next(0, NotFullInstance_locals.Count)];
+                    int los3 = NotFullInstance_locals[rnd.Next(0, NotFullInstance_locals.Count)];
 
                     if (counter[los3] >= Instance_local[los3].Length)
                     {
@@ -297,27 +299,25 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                         continue;
                     }
 
-                    if (Instance_local[los3][counter[los3]] ==
-                        wPopulation[los][los2])
+                    if (Instance_local[los3][counter[los3]] == wPopulation[los][los2])
                     {
                         j--;
                         continue;
                     }
 
-                    wPopulation[los] =
-                        wPopulation[los].Insert(
-                            los2,
-                            Instance_local[los3][counter[los3]].ToString());
+                    wPopulation[los] = wPopulation[los].Insert(los2, Instance_local[los3][counter[los3]].ToString());
+                    wPopulation[los] = SimplifyIndividual(wPopulation[los], Instance_local);
                 }
+                if (automatic_change_of_mutation_probability)
+                    w_mutation_probability = mutation_probability;
 
+                //sprawdzenie najlepszej wartosci
                 for (int j = 0; j < wPopulation.Count; j++)
                 {
                     if (wPopulation[j].Length < best_value)
                     {
                         Best_results.Clear();
-
                         best_value = wPopulation[j].Length;
-
                         Best_results.Add(wPopulation[j].Trim());
                     }
                     else if (wPopulation[j].Length == best_value)
@@ -325,6 +325,7 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                         Best_results.Add(wPopulation[j].Trim());
                     }
                 }
+                points_history.Add(best_value);
             }
 
             sw.Stop();
@@ -339,17 +340,29 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
 
         private void SaveCsv(int m, int n, int err_count, List<string> seq_opt, List<GAResult> results)
         {
-            MessageBox.Show("Próbujê zapisaæ do wyniki_testow.csv i srednie_wyniki.csv");
-            // --- CZÊŒÆ 1: ZAPIS SZCZEGÓ£OWY ---
-            string fileName = "wyniki_testow.csv";
+            //MessageBox.Show("Próbujê zapisaæ do wyniki_testow.csv i srednie_wyniki.csv");
+            string fileName = "wyniki_testow2.csv";
             StringBuilder sb = new StringBuilder();
+
+            string downtimeLengthValue =
+                automatic_change_of_mutation_probability
+                ? downtime_length.ToString()
+                : "-";
+
+            string tmpMutationProbabilityValue =
+                automatic_change_of_mutation_probability
+                ? tmp_mutation_probability.ToString()
+                : "-";
 
             if (!File.Exists(fileName))
             {
                 sb.AppendLine(
                     "m;n;err_count;population_size;iteration_cycles_count;" +
-                    "mutation_probability;number_of_parents_left_in_the_population;" +
+                    "mutation_probability;percent_of_parents_left_in_the_population;" +
                     "reproductive_pressure;number_of_extension_of_the_child;" +
+                    "automatic_change_of_mutation_probability;" +
+                    "downtime_length;" +
+                    "tmp_mutation_probability;" +
                     "seq_opt;dlugosc_seq_opt;BestValue;BestSolution;TimeMs");
             }
 
@@ -364,9 +377,12 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                     $"{this.population_size};" +
                     $"{this.iteration_cycles_count};" +
                     $"{this.mutation_probability};" +
-                    $"{this.number_of_parents_left_in_the_population};" +
+                    $"{this.percent_of_parents_left_in_the_population};" +
                     $"{this.reproductive_pressure};" +
                     $"{this.number_of_extension_of_the_child};" +
+                    $"{automatic_change_of_mutation_probability};" +
+                    $"{downtimeLengthValue};" +
+                    $"{tmpMutationProbabilityValue};" +
                     $"{seq_opt[i]};" +
                     $"{seqOptLength};" +
                     $"{results[i].BestValue};" +
@@ -376,28 +392,27 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
 
             File.AppendAllText(fileName, sb.ToString());
 
-            // --- CZÊŒÆ 2: ZAPIS ŒREDNICH WARTOŒCI ---
-            // Zabezpieczenie przed dzieleniem przez zero, gdyby lista by³a pusta
             if (results == null || results.Count == 0) return;
 
-            string avgFileName = "srednie_wyniki.csv";
+            string avgFileName = "srednie_wyniki2.csv";
             StringBuilder sbAvg = new StringBuilder();
 
-            // Sprawdzenie czy plik ze œrednimi istnieje, jeœli nie - dodajemy nag³ówek
             if (!File.Exists(avgFileName))
             {
                 sbAvg.AppendLine(
-                    "m;n;err_count;population_size;iteration_cycles_count;" +
-                    "mutation_probability;number_of_parents_left_in_the_population;" +
-                    "reproductive_pressure;number_of_extension_of_the_child;" +
-                    "dlugosc_seq_opt;SredniaBestValue;SredniaTimeMs");
+                     "m;n;err_count;population_size;iteration_cycles_count;" +
+                     "mutation_probability;percent_of_parents_left_in_the_population;" +
+                     "reproductive_pressure;number_of_extension_of_the_child;" +
+                     "automatic_change_of_mutation_probability;" +
+                     "downtime_length;" +
+                     "tmp_mutation_probability;" +
+                     "dlugosc_seq_opt;SredniaBestValue;SredniaTimeMs");
             }
 
             // Wyliczanie œrednich za pomoc¹ LINQ
             double avgBestValue = results.Average(r => r.BestValue);
             double avgTimeMs = results.Average(r => r.TimeMs);
 
-            // Zapis pojedynczego wiersza podsumowuj¹cego bie¿¹cy test
             sbAvg.AppendLine(
                 $"{m};" +
                 $"{n};" +
@@ -405,20 +420,22 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                 $"{this.population_size};" +
                 $"{this.iteration_cycles_count};" +
                 $"{this.mutation_probability};" +
-                $"{this.number_of_parents_left_in_the_population};" +
+                $"{this.percent_of_parents_left_in_the_population};" +
                 $"{this.reproductive_pressure};" +
                 $"{this.number_of_extension_of_the_child};" +
+                $"{automatic_change_of_mutation_probability};" +
+                $"{downtimeLengthValue};" +
+                $"{tmpMutationProbabilityValue};" +
                 $"{seqOptLength};" +
                 $"{avgBestValue};" +
                 $"{avgTimeMs}");
 
             File.AppendAllText(avgFileName, sbAvg.ToString());
-            MessageBox.Show($"Zapisano plik w: {Path.GetFullPath(fileName)}");
+            MessageBox.Show($"Zapisano plik w: {Path.GetFullPath(fileName)} i {Path.GetFullPath(avgFileName)}");
         }
 
         public static string FindLCS(string s1, string s2)
         {
-            // Obs³uga przypadków brzegowych
             if (string.IsNullOrEmpty(s1) || string.IsNullOrEmpty(s2))
             {
                 return string.Empty;
@@ -426,49 +443,35 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
 
             int m = s1.Length;
             int n = s2.Length;
-
-            // Tworzenie macierzy do przechowywania d³ugoœci podci¹gów
             int[,] dp = new int[m + 1, n + 1];
-
-            // Krok 1: Wype³nianie macierzy d³ugoœciami
             for (int i = 1; i <= m; i++)
             {
                 for (int j = 1; j <= n; j++)
                 {
                     if (s1[i - 1] == s2[j - 1])
-                    {
                         dp[i, j] = dp[i - 1, j - 1] + 1;
-                    }
                     else
-                    {
                         dp[i, j] = Math.Max(dp[i - 1, j], dp[i, j - 1]);
-                    }
                 }
             }
 
-            // Krok 2: Odtwarzanie podci¹gu tekstowego na podstawie macierzy (od koñca)
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
             int x = m, y = n;
-
             while (x > 0 && y > 0)
             {
                 if (s1[x - 1] == s2[y - 1])
                 {
-                    sb.Append(s1[x - 1]); // Znak pasuje, dodajemy go
+                    sb.Append(s1[x - 1]); // Znak pasuje
                     x--;
                     y--;
                 }
                 else if (dp[x - 1, y] >= dp[x, y - 1])
-                {
-                    x--; // Idziemy w górê macierzy
-                }
+                    x--;
                 else
-                {
-                    y--; // Idziemy w lewo macierzy
-                }
+                    y--;
             }
 
-            // Poniewa¿ odtwarzaliœmy od koñca, musimy odwróciæ wynik
+            //Odwrócenie wyniku
             char[] array = sb.ToString().ToCharArray();
             Array.Reverse(array);
 
@@ -477,16 +480,11 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
 
         public static (string Subsequence, List<int> IndicesS1, List<int> IndicesS2) ZnajdzLcsZPozycjami(string s1, string s2)
         {
-            // Obs³uga przypadków brzegowych
             if (string.IsNullOrEmpty(s1) || string.IsNullOrEmpty(s2))
-            {
                 return (string.Empty, new List<int>(), new List<int>());
-            }
 
             int m = s1.Length;
             int n = s2.Length;
-
-            // Krok 1: Budowanie macierzy wag (standardowy LCS)
             int[,] dp = new int[m + 1, n + 1];
 
             for (int i = 1; i <= m; i++)
@@ -504,21 +502,18 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                 }
             }
 
-            // Listy na indeksy oraz StringBuilder na znaki
             List<int> indicesS1 = new List<int>();
             List<int> indicesS2 = new List<int>();
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
-
             int x = m, y = n;
 
-            // Krok 2: Odtwarzanie podci¹gu z zapisem indeksów (od koñca)
             while (x > 0 && y > 0)
             {
                 if (s1[x - 1] == s2[y - 1])
                 {
-                    sb.Append(s1[x - 1]);
+                    sb.Append(s1[x - 1]); // Znak pasuje
 
-                    // Zapisujemy indeksy (x - 1 oraz y - 1 odpowiadaj¹ realnym pozycjom w stringach)
+                    // Zapisywanie indeksów
                     indicesS1.Add(x - 1);
                     indicesS2.Add(y - 1);
 
@@ -526,16 +521,12 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                     y--;
                 }
                 else if (dp[x - 1, y] >= dp[x, y - 1])
-                {
                     x--;
-                }
                 else
-                {
                     y--;
-                }
             }
 
-            // Krok 3: Przywrócenie poprawnej kolejnoœci (odwrócenie wyników)
+            //Odwrócenie wyniku
             char[] charArray = sb.ToString().ToCharArray();
             Array.Reverse(charArray);
             string lcsString = new string(charArray);
@@ -546,6 +537,63 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
             return (lcsString, indicesS1, indicesS2);
         }
 
+        private string SimplifyIndividual_old(string individual, List<string> Instance)
+        {
+            StringBuilder child = new StringBuilder(individual);
+            List<int> counter = Enumerable.Repeat(0, Instance.Count).ToList();
+            for (int i = 0; i < child.Length; i++)
+            {
+                for (int j = 0; j < Instance.Count; j++)
+                {
+                    if (counter[j] < Instance[j].Length && child[i] == Instance[j][counter[j]])
+                        counter[j]++;
+                }
+
+                // wszystkie sekwencje ju¿ pokryte
+                if (!counter.Any(x => x < Instance[0].Length))
+                {
+                    child.Length = i + 1;
+                    break;
+                }
+            }
+            return child.ToString();
+        }
+
+        private string SimplifyIndividual(string individual, List<string> Instance)
+        {
+            StringBuilder child = new StringBuilder(individual);
+            List<int> counter = Enumerable.Repeat(0, Instance.Count).ToList();
+            for (int i = 0; i < child.Length; i++)
+            {
+                bool nuc_used = false;
+                for (int j = 0; j < Instance.Count; j++)
+                {
+                    if (counter[j] < Instance[j].Length && child[i] == Instance[j][counter[j]])
+                    {
+                        counter[j]++;
+                        nuc_used = true;
+                    }
+                }
+
+                // nukleotyd nie zosta³ wykorzystany przez ¿adn¹ sekwencjê
+                if (!nuc_used)
+                {
+                    child.Remove(i, 1);
+                    i--;
+                    continue;
+                }
+
+                // wszystkie sekwencje ju¿ pokryte
+                if (!counter.Any(x => x < Instance[0].Length))
+                {
+                    child.Length = i + 1;
+                    break;
+                }
+            }
+
+            return child.ToString();
+        }
+
         private string Reproduction(List<string> Instance_local, string seq1, string seq2)
         {
             var wynik = ZnajdzLcsZPozycjami(seq1, seq2);
@@ -554,36 +602,24 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
             List<int> indicesS2 = wynik.IndicesS2;
             System.Text.StringBuilder child = new System.Text.StringBuilder();
 
-            // WskaŸniki informuj¹ce, od którego miejsca w s1 i s2 zaczyna siê aktualna "dziura"
             int currentIdxS1 = 0;
             int currentIdxS2 = 0;
 
-            // Przechodzimy po ka¿dym znaku wspólnego podci¹gu (punktach kotwiczenia)
             for (int i = 0; i < subsequence.Length; i++)
             {
-                // Wyznaczamy indeksy punktu wspólnego u obu rodziców
                 int lcsIdxS1 = indicesS1[i];
                 int lcsIdxS2 = indicesS2[i];
-
-                // Wycinamy fragmenty tekstowe stanowi¹ce "dziurê" przed tym znakiem LCS
                 string gapS1 = seq1.Substring(currentIdxS1, lcsIdxS1 - currentIdxS1);
                 string gapS2 = seq2.Substring(currentIdxS2, lcsIdxS2 - currentIdxS2);
-
-                // Losujemy (0 = Rodzic 1, 1 = Rodzic 2) i dodajemy wybrany fragment luki do dziecka
                 if (rnd.Next(0, 2) == 0)
                     child.Append(gapS1);
                 else
                     child.Append(gapS2);
-
-                // Dodajemy sta³y, nienaruszalny znak z LCS
                 child.Append(subsequence[i]);
-
-                // Przesuwamy wskaŸniki na pozycjê tu¿ ZA aktualnym znakiem LCS
                 currentIdxS1 = lcsIdxS1 + 1;
                 currentIdxS2 = lcsIdxS2 + 1;
             }
 
-            // Obs³uga ostatniej "dziury" - fragmentów pozosta³ych za ostatnim znakiem LCS do koñca stringów
             string finalGapS1 = seq1.Substring(currentIdxS1);
             string finalGapS2 = seq2.Substring(currentIdxS2);
 
@@ -614,8 +650,7 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                 }
                 if (!nuc_used)
                 {
-                    // --- NOWA OPCJA: USUWANIE NIEPASUJ¥CEGO ZNAKU ---
-                    // Sprawdzamy, czy istnieje kolejny znak i czy by³by on przydatny
+                    // Czy istnieje kolejny znak i czy by³by on przydatny
                     if (i + 1 < child.Length)
                     {
                         char nextChar = child[i + 1];
@@ -646,13 +681,9 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                     child.Insert(i, Instance_local[los][counter[los]]);
                     i--;
                     if (i > 0)
-                    {
                         i--;
-                    }
                     else
-                    {
                         i = -1;
-                    }
                 }
             }
             List<int> counter2 = Enumerable.Repeat(0, Instance_local.Count).ToList();
@@ -688,18 +719,13 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
 
         private string SelectParent(List<string> Parents)
         {
-            var ranked = Parents
-                .OrderBy(x => x.Length)
-                .ToList();
-
+            var ranked = Parents.OrderBy(x => x.Length).ToList();
             int n = ranked.Count;
-
             List<double> weights = new List<double>();
 
             for (int i = 0; i < n; i++)
             {
                 double weight;
-
                 if (n == 1)
                     weight = 1.0;
                 else
@@ -707,21 +733,16 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
 
                 weights.Add(weight);
             }
-
             double totalWeight = weights.Sum();
-
             double r = rnd.NextDouble() * totalWeight;
-
             double cumulative = 0;
 
             for (int i = 0; i < n; i++)
             {
                 cumulative += weights[i];
-
                 if (r <= cumulative)
                     return ranked[i];
             }
-
             return ranked[n - 1];
         }
 
@@ -736,10 +757,10 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
             }
             else
             {
-                if (int.TryParse(textBox1.Text, out m)) { }
+                if (int.TryParse(textBox1.Text, out m) && m>0) { }
                 else
                 {
-                    MessageBox.Show("To nie jest poprawna liczba ca³kowita!");
+                    MessageBox.Show("To nie jest poprawna liczba dodatnia ca³kowita!");
                     textBox1.Focus();
                     return;
                 }
@@ -748,29 +769,36 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
             bool if_n_random = false;
             if (string.IsNullOrWhiteSpace(textBox2.Text))
             {
-                n = rnd.Next(2, 50);
+                if (!string.IsNullOrWhiteSpace(textBox4.Text))
+                {
+                    MessageBox.Show("Je¿eli podajesz d³ugoœæ sekwencji optymalnej, podaj te¿ d³ugoœæ sekwencji w instancji!");
+                    textBox4.Focus();
+                    return;
+                }
+                else
+                    n = rnd.Next(5, 80);
                 if_n_random = true;
             }
             else
             {
-                if (int.TryParse(textBox2.Text, out n)) { }
+                if (int.TryParse(textBox2.Text, out n) && n>0) { }
                 else
                 {
-                    MessageBox.Show("To nie jest poprawna liczba ca³kowita!");
+                    MessageBox.Show("To nie jest poprawna liczba dodatnia ca³kowita!");
                     textBox2.Focus();
                     return;
                 }
             }
             if (string.IsNullOrWhiteSpace(textBox4.Text))
             {
-                n_seq_opt = rnd.Next(n, n + 20);
+                n_seq_opt = rnd.Next(n, n + 50);
             }
             else
             {
-                if (int.TryParse(textBox4.Text, out n_seq_opt)) { }
+                if (int.TryParse(textBox4.Text, out n_seq_opt) && n_seq_opt>0) { }
                 else
                 {
-                    MessageBox.Show("To nie jest poprawna liczba ca³kowita!");
+                    MessageBox.Show("To nie jest poprawna liczba dodatnia ca³kowita!");
                     textBox4.Focus();
                     return;
                 }
@@ -787,10 +815,10 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
             }
             else
             {
-                if (int.TryParse(textBox5.Text, out err_count)) { }
+                if (int.TryParse(textBox5.Text, out err_count) && err_count>=0) { }
                 else
                 {
-                    MessageBox.Show("To nie jest poprawna liczba ca³kowita!");
+                    MessageBox.Show("To nie jest poprawna liczba ca³kowita wiêksza ni¿ 0!");
                     textBox5.Focus();
                     return;
                 }
@@ -874,7 +902,7 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
             string matrix_text = string.Join(Environment.NewLine, Instance);
             textBox3.WordWrap = false;
             textBox3.Text = matrix_text;
-            button3.Visible = true;
+            button3.Enabled = true;
             textBox16.Text = seq_opt;
             label23.Text = seq_opt.Length.ToString();
             textBox16.Visible = true;
@@ -903,7 +931,7 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
             else
             {
                 label2.Visible = true;
-                button3.Visible = true;
+                button3.Enabled = true;
                 Instance = textBox3.Lines.ToList();
                 textBox16.Text = "Nie dotyczy";
                 label23.Text = "Nie dotyczy";
@@ -917,7 +945,7 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
 
         private void textBox3_TextChanged(object sender, EventArgs e)
         {
-            button3.Visible = false;
+            button3.Enabled = false;
             label2.Visible = false;
         }
 
@@ -963,17 +991,17 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
             }
             if (!string.IsNullOrWhiteSpace(textBox13.Text))
             {
-                if (double.TryParse(textBox13.Text, out number_of_parents_left_in_the_population)) { }
+                if (double.TryParse(textBox13.Text, out percent_of_parents_left_in_the_population)) { }
                 else
                 {
                     MessageBox.Show("To nie jest poprawna liczba u³amkowa z zakresu 0-1!");
                     textBox13.Focus();
                     return;
                 }
-                if (number_of_parents_left_in_the_population > 1 || number_of_parents_left_in_the_population < 0)
+                if (percent_of_parents_left_in_the_population > 1 || percent_of_parents_left_in_the_population < 0)
                 {
                     MessageBox.Show("To nie jest poprawna liczba u³amkowa z zakresu 0-1!");
-                    number_of_parents_left_in_the_population = 0.2;
+                    percent_of_parents_left_in_the_population = 0.2;
                     textBox13.Focus();
                     return;
                 }
@@ -1006,6 +1034,33 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                 }
             }
 
+            if (checkBox1.Checked)
+            {
+                if (!string.IsNullOrWhiteSpace(textBox17.Text))
+                {
+                    if (double.TryParse(textBox17.Text, out tmp_mutation_probability)) { }
+                    else
+                    {
+                        MessageBox.Show("To nie jest poprawna liczba ca³kowita!");
+                        textBox17.Focus();
+                        return;
+                    }
+                }
+                if (!string.IsNullOrWhiteSpace(textBox18.Text))
+                {
+                    if (int.TryParse(textBox18.Text, out downtime_length)) { }
+                    else
+                    {
+                        MessageBox.Show("To nie jest poprawna liczba ca³kowita!");
+                        textBox18.Focus();
+                        return;
+                    }
+                }
+
+            }
+            else
+                automatic_change_of_mutation_probability = false;
+
             Stop = false;   // W¹tek ma prawo dzia³aæ
             Active = true;  // W¹tek nie jest zapauzowany na starcie
             stoper.Reset();
@@ -1024,8 +1079,12 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
             label10.Visible = true;
             textBox9.Visible = true;
             label11.Visible = true;
-            button1.Visible = false;
-            button2.Visible = false;
+            button1.Enabled = false;
+            button2.Enabled = false;
+            button4.Enabled = false;
+            button5.Enabled = false;
+            button6.Enabled = false;
+            button7.Enabled = false;
 
             chart1.Series.Clear();
             chart1.Titles.Clear();
@@ -1070,7 +1129,7 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
 
 
             Stop = false;
-            bw = new BackgroundWorker();
+            BackgroundWorker bw = new BackgroundWorker();
             bw.WorkerReportsProgress = true;
 
             // kod wykonywany na osobnym w¹tku
@@ -1079,7 +1138,9 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                 {
                     BackgroundWorker b = o as BackgroundWorker;
                     List<string> wPopulation = new List<string>((List<string>)args.Argument);
+                    double w_mutation_probability = mutation_probability;
 
+                    List<double> points_history = new List<double>();
                     HashSet<string> Best_results = new HashSet<string>();
                     Best_results.Add(wPopulation[0]);
                     int best_value = wPopulation[0].Length;
@@ -1094,6 +1155,7 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                         else if (wPopulation[j].Length == best_value && !Best_results.Contains(wPopulation[j]))
                             Best_results.Add(wPopulation[j].Trim());
                     }
+
                     for (int i = 0; i <= iteration_cycles_count; i++)
                     {
                         // zatrzymanie po zamkniêciu okna
@@ -1119,7 +1181,7 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                         List<string> Parents = new List<string>(wPopulation);
                         //zabijanie rodziców
                         wPopulation.Clear();
-                        int staying_alive = (int)Math.Round(Parents.Count * number_of_parents_left_in_the_population, MidpointRounding.AwayFromZero);
+                        int staying_alive = (int)Math.Round(Parents.Count * percent_of_parents_left_in_the_population, MidpointRounding.AwayFromZero);
                         for (int j = 0; j < staying_alive; j++)
                             wPopulation.Add(SelectParent(Parents));
                         //reprodukcja
@@ -1133,11 +1195,41 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                             if (child != "e")
                                 wPopulation.Add(child);
                         }
+
+                        //sprawdzenie czy nowe najlepsze rozwi¹zanie
+                        for (int j = 0; j < wPopulation.Count; j++)
+                        {
+                            if (wPopulation[j].Length < best_value)
+                            {
+                                Best_results.Clear();
+                                best_value = wPopulation[j].Length;
+                                Best_results.Add(wPopulation[j].Trim());
+                            }
+                            else if (wPopulation[j].Length == best_value && !Best_results.Contains(wPopulation[j]))
+                                Best_results.Add(wPopulation[j].Trim());
+                        }
+
+                        //sprawdzenie czy przestoj
+                        if (automatic_change_of_mutation_probability)
+                        {
+                            bool is_downtime = false;
+                            var points = points_history;
+                            if (points.Count >= downtime_length)
+                            {
+                                var last_ten = points.Skip(points.Count - downtime_length).ToList();
+                                double first_value_y = last_ten[0];
+                                is_downtime = last_ten.All(p => p == first_value_y);
+
+                                if (is_downtime)
+                                    w_mutation_probability = tmp_mutation_probability;
+                            }
+                        }
+
                         //mutacje
                         int population_total_length = 0;
                         for (int j = 0; j < wPopulation.Count; j++)
                             population_total_length += Population[j].Length;
-                        int number_of_mutation = (int)Math.Round(population_total_length * mutation_probability, MidpointRounding.AwayFromZero);
+                        int number_of_mutation = (int)Math.Round(population_total_length * w_mutation_probability, MidpointRounding.AwayFromZero);
                         //MessageBox.Show("Liczba mutacji to: " + number_of_mutation.ToString());
                         for (int j = 0; j < number_of_mutation; j++)
                         {
@@ -1167,9 +1259,12 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                                 j--;
                                 continue;
                             }
+                            string old_entity = wPopulation[los];
                             wPopulation[los] = wPopulation[los].Insert(los2, Instance[los3][counter[los3]].ToString());
+                            wPopulation[los] = SimplifyIndividual(wPopulation[los], Instance);
                         }
-
+                        if (automatic_change_of_mutation_probability)
+                            w_mutation_probability = mutation_probability;
 
                         //sprawdzenie czy nowe najlepsze rozwi¹zanie
                         for (int j = 0; j < wPopulation.Count; j++)
@@ -1199,7 +1294,7 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
 
                         // Raportujemy postêp i przesy³amy tablicê do w¹tku g³ównego
                         b.ReportProgress(progressPercent, guiData);
-
+                        points_history.Add(best_value);
 
                         //Thread.Sleep(500);
                     }
@@ -1210,10 +1305,8 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
             bw.ProgressChanged += new ProgressChangedEventHandler(
                 delegate (object o, ProgressChangedEventArgs args)
                 {
-                    // Odbieramy dane jako zwyk³¹ tablicê stringów (Zamiast dynamic data = args.UserState)
                     if (args.UserState is string[] data)
                     {
-                        // Przypisujemy bezpiecznie wartoœci wed³ug indeksów tablicy
                         textBox6.Text = data[0]; // CurrentPopulation
                         textBox7.Text = data[1]; // BestResultsText
                         textBox8.Text = data[2]; // BestValueText
@@ -1239,15 +1332,10 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                         }
                         textBox9.Text = sb.ToString();
                         label12.Text = data[3];
-                        if (data.Length >= 5 &&
-                            double.TryParse(data[4], out double xIteracja) &&
-                            double.TryParse(data[2], out double yFunkcjaCelu))
+                        if (data.Length >= 5 && double.TryParse(data[4], out double xIteracja) && double.TryParse(data[2], out double yFunkcjaCelu))
                         {
-                            // Szukamy naszej serii o nazwie "Funkcja celu" i dodajemy punkt (X, Y)
                             chart1.Series["Funkcja celu"].Points.AddXY(xIteracja, yFunkcjaCelu);
                         }
-
-
                     }
                     label7.Text = $"Postêp: {args.ProgressPercentage}%";
                 });
@@ -1260,8 +1348,16 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                     button3.Visible = true;
                     buttonStop.Visible = false;
                     buttonPause.Visible = false;
-                    button1.Visible = true;
-                    button2.Visible = true;
+                    button1.Enabled = true;
+                    button2.Enabled = true;
+                    button4.Enabled = true;
+                    if (generatedTests.Count > 0)
+                    {
+                        button5.Enabled = true;
+                        button6.Enabled = true;
+                    }
+                    button7.Enabled = true;
+
                     if (args.Error != null)
                     {
                         MessageBox.Show($"W¹tek wywali³ siê z powodu b³êdu:\n{args.Error.Message}\n\nMiejsce b³êdu:\n{args.Error.StackTrace}");
@@ -1287,13 +1383,13 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
             if (Active)
             {
                 Active = false;
-                buttonPause.Text = "Resume";
+                buttonPause.Text = "Wznów";
                 stoper.Stop();
             }
             else
             {
                 Active = true;
-                buttonPause.Text = "Pause";
+                buttonPause.Text = "Pauza";
                 stoper.Start();
 
             }
@@ -1309,59 +1405,79 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
         private void button4_Click(object sender, EventArgs e)
         {
             button4.Enabled = false;
-            List<GAResult> results = new List<GAResult>();
-            List<string> opt_seqs = new List<string>();
+            //List<GAResult> results = new List<GAResult>();
+            //List<string> opt_seqs = new List<string>();
             int testsCount = 10;
-
-            int m;
+            int m, n, n_seq_opt, err_count;
+            bool if_n_random = false;
             if (string.IsNullOrWhiteSpace(textBox1.Text))
             {
                 m = rnd.Next(2, 50);
             }
             else
             {
-                if (int.TryParse(textBox1.Text, out m)) { }
+                if (int.TryParse(textBox1.Text, out m) && m > 0) { }
                 else
                 {
-                    MessageBox.Show("To nie jest poprawna liczba ca³kowita!");
+                    MessageBox.Show("To nie jest poprawna liczba dodatnia ca³kowita!");
                     textBox1.Focus();
+                    button4.Enabled = true;
+                    button5.Enabled = true;
+                    button6.Enabled = true;
                     return;
                 }
             }
-            int n, n_seq_opt, err_count;
-            bool if_n_random = false;
             if (string.IsNullOrWhiteSpace(textBox2.Text))
             {
-                n = rnd.Next(2, 50);
+                if (!string.IsNullOrWhiteSpace(textBox4.Text))
+                {
+                    MessageBox.Show("Je¿eli podajesz d³ugoœæ sekwencji optymalnej, podaj te¿ d³ugoœæ sekwencji w instancji!");
+                    textBox4.Focus();
+                    button4.Enabled = true;
+                    button5.Enabled = true;
+                    button6.Enabled = true;
+                    return;
+                }
+                else
+                    n = rnd.Next(5, 80);
                 if_n_random = true;
             }
             else
             {
-                if (int.TryParse(textBox2.Text, out n)) { }
+                if (int.TryParse(textBox2.Text, out n) && n > 0) { }
                 else
                 {
-                    MessageBox.Show("To nie jest poprawna liczba ca³kowita!");
+                    MessageBox.Show("To nie jest poprawna liczba dodatnia ca³kowita!");
                     textBox2.Focus();
+                    button4.Enabled = true;
+                    button5.Enabled = true;
+                    button6.Enabled = true;
                     return;
                 }
             }
             if (string.IsNullOrWhiteSpace(textBox4.Text))
             {
-                n_seq_opt = rnd.Next(n, n + 20);
+                n_seq_opt = rnd.Next(n, n + 50);
             }
             else
             {
-                if (int.TryParse(textBox4.Text, out n_seq_opt)) { }
+                if (int.TryParse(textBox4.Text, out n_seq_opt) && n_seq_opt > 0) { }
                 else
                 {
-                    MessageBox.Show("To nie jest poprawna liczba ca³kowita!");
+                    MessageBox.Show("To nie jest poprawna liczba dodatnia ca³kowita!");
                     textBox4.Focus();
+                    button4.Enabled = true;
+                    button5.Enabled = true;
+                    button6.Enabled = true;
                     return;
                 }
                 if (if_n_random == false && n_seq_opt < n)
                 {
                     MessageBox.Show("D³ugoœæ sekwencji optymalnej musi byæ wiêksza lub równa d³ugoœci sekwencji!");
                     textBox4.Focus();
+                    button4.Enabled = true;
+                    button5.Enabled = true;
+                    button6.Enabled = true;
                     return;
                 }
             }
@@ -1371,14 +1487,45 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
             }
             else
             {
-                if (int.TryParse(textBox5.Text, out err_count)) { }
+                if (int.TryParse(textBox5.Text, out err_count) && err_count >= 0) { }
                 else
                 {
-                    MessageBox.Show("To nie jest poprawna liczba ca³kowita!");
+                    MessageBox.Show("To nie jest poprawna liczba ca³kowita wiêksza ni¿ 0!");
                     textBox5.Focus();
+                    button4.Enabled = true;
+                    button5.Enabled = true;
+                    button6.Enabled = true;
                     return;
                 }
             }
+            generatedTests.Clear();
+
+            for (int i = 0; i < testsCount; i++)
+            {
+                var generated = GenerateInstance(m, n, n_seq_opt, err_count);
+
+                generatedTests.Add(
+                    new TestInstance
+                    {
+                        M = m,
+                        N = n,
+                        NSeqOpt = n_seq_opt,
+                        ErrCount = err_count,
+                        GeneratorSolution = generated.SeqOpt,
+                        Instance = generated.Instance_local
+                    });
+            }
+
+            MessageBox.Show(
+                $"Wygenerowano {generatedTests.Count} instancji.");
+
+            button4.Enabled = true;
+            button5.Enabled = true;
+            button6.Enabled = true;
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
 
             if (!string.IsNullOrWhiteSpace(textBox10.Text))
             {
@@ -1419,17 +1566,17 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
             }
             if (!string.IsNullOrWhiteSpace(textBox13.Text))
             {
-                if (double.TryParse(textBox13.Text, out number_of_parents_left_in_the_population)) { }
+                if (double.TryParse(textBox13.Text, out percent_of_parents_left_in_the_population)) { }
                 else
                 {
                     MessageBox.Show("To nie jest poprawna liczba u³amkowa z zakresu 0-1!");
                     textBox13.Focus();
                     return;
                 }
-                if (number_of_parents_left_in_the_population > 1 || number_of_parents_left_in_the_population < 0)
+                if (percent_of_parents_left_in_the_population > 1 || percent_of_parents_left_in_the_population < 0)
                 {
                     MessageBox.Show("To nie jest poprawna liczba u³amkowa z zakresu 0-1!");
-                    number_of_parents_left_in_the_population = 0.2;
+                    percent_of_parents_left_in_the_population = 0.2;
                     textBox13.Focus();
                     return;
                 }
@@ -1462,69 +1609,160 @@ namespace Projekt_zaawansowane_metody_obliczeniowe
                 }
             }
 
-            bw = new BackgroundWorker();
-            bw.WorkerReportsProgress = true;
-
-            // KOD WYKONYWANY NA OSOBNYM W¥TKU (OBLICZENIA)
-            bw.DoWork += new DoWorkEventHandler(
-                delegate (object o, DoWorkEventArgs args)
+            if (checkBox1.Checked)
+            {
+                if (!string.IsNullOrWhiteSpace(textBox17.Text))
                 {
-                    BackgroundWorker b = o as BackgroundWorker;
-                    List<GAResult> innerResults = new List<GAResult>();
-                    List<string> Instance_local = new List<string>();
-
-                    for (int test = 0; test < testsCount; test++)
+                    if (double.TryParse(textBox17.Text, out tmp_mutation_probability)) { }
+                    else
                     {
-                        // Generowanie instancji w tle przy u¿yciu przekazanych bezpiecznie parametrów m, n...
-                        var generated = GenerateInstance(m, n, n_seq_opt, err_count);
-
-                        Instance_local = generated.Instance_local;
-                        string seq_opt = generated.SeqOpt;
-                        opt_seqs.Add(seq_opt);
-
-                        GAResult result = RunGeneticAlgorithm(Instance_local);
-                        innerResults.Add(result);
-
-                        // Raportowanie postêpu (np. do paska postêpu)
-                        int progressPercent = (int)(((double)(test + 1) / testsCount) * 100);
-                        b.ReportProgress(progressPercent);
+                        MessageBox.Show("To nie jest poprawna liczba ca³kowita!");
+                        textBox17.Focus();
+                        return;
                     }
-
-                    // Przekazujemy zgromadzon¹ listê wyników do zdarzenia zakoñczenia pracy
-                    args.Result = innerResults;
-                });
-
-            // BEZPIECZNA AKTUALIZACJA GUI W TRAKCIE OBLICZEÑ
-            bw.ProgressChanged += new ProgressChangedEventHandler(
-                delegate (object o, ProgressChangedEventArgs args)
+                }
+                else
+                if (!string.IsNullOrWhiteSpace(textBox18.Text))
                 {
-                    // Tutaj mo¿esz zaktualizowaæ np. ProgressBar:
-                    // progressBar1.Value = args.ProgressPercentage;
-                });
-
-            // ZAKOÑCZENIE OBLICZEÑ (POWRÓT DO W¥TKU G£ÓWNEGO UI)
-            bw.RunWorkerCompleted += new RunWorkerCompletedEventHandler(
-                delegate (object o, RunWorkerCompletedEventArgs args)
-                {
-                    // Pobieramy wyniki wygenerowane w tle
-                    List<GAResult> finalResults = args.Result as List<GAResult>;
-
-                    if (finalResults != null)
-                    {
-                        // Wywo³anie zapisu do plików CSV (stworzonego w poprzednim kroku)
-                        SaveCsv(m, n, err_count, opt_seqs, finalResults);
+                    if (int.TryParse(textBox18.Text, out downtime_length)) {
+                        automatic_change_of_mutation_probability = true;    
                     }
                     else
-                        MessageBox.Show("ERROR");
+                    {
+                        MessageBox.Show("To nie jest poprawna liczba ca³kowita!");
+                        textBox18.Focus();
+                        return;
+                    }
+                }
 
-                    // Odblokowanie przycisku interfejsu
-                    button4.Enabled = true;
+            }
+            else
+                automatic_change_of_mutation_probability = false;
 
-                    MessageBox.Show("Test zakoñczony.");
-                });
+            if (generatedTests.Count == 0)
+            {
+                MessageBox.Show("Najpierw wygeneruj instancje.");
+                return;
+            }
+            button1.Enabled = false;
+            button2.Enabled = false;
+            button3.Enabled = false;
+            button4.Enabled = false;
+            button5.Enabled = false;
+            button6.Enabled = false;
+            button7.Enabled = false;
 
-            // START NOWEGO W¥TKU
-            bw.RunWorkerAsync();
+
+            int testsCount = generatedTests.Count;
+
+            GAResult[] results = new GAResult[testsCount];
+
+            Parallel.For(0, testsCount, test =>
+            {
+                results[test] =
+                    RunGeneticAlgorithm(
+                        generatedTests[test].Instance);
+            });
+
+            SaveCsv(
+                generatedTests[0].M,
+                generatedTests[0].N,
+                generatedTests[0].ErrCount,
+                generatedTests
+                    .Select(x => x.GeneratorSolution)
+                    .ToList(),
+                results.ToList());
+
+            MessageBox.Show("Test zakoñczony.");
+            button1.Enabled = true;
+            button2.Enabled = true;
+            if (Instance.Count != 0)
+                button3.Enabled = false;
+            button4.Enabled = true;
+            button5.Enabled = true;
+            button6.Enabled = true;
+            button7.Enabled = true;
         }
+
+        private void button6_Click(object sender, EventArgs e)
+        {
+            if (generatedTests.Count == 0)
+            {
+                MessageBox.Show("Brak wygenerowanych instancji.");
+                return;
+            }
+
+            SaveFileDialog sfd = new SaveFileDialog();
+            sfd.Filter = "JSON files (*.json)|*.json";
+            sfd.FileName = "instances.json";
+
+            if (sfd.ShowDialog() == DialogResult.OK)
+            {
+                string json = JsonSerializer.Serialize(
+                    generatedTests,
+                    new JsonSerializerOptions
+                    {
+                        WriteIndented = true
+                    });
+
+                File.WriteAllText(sfd.FileName, json);
+
+                MessageBox.Show(
+                    $"Zapisano {generatedTests.Count} instancji.");
+            }
+        }
+
+        private void button7_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog ofd = new OpenFileDialog();
+            ofd.Filter = "JSON files (*.json)|*.json";
+
+            if (ofd.ShowDialog() == DialogResult.OK)
+            {
+                string json = File.ReadAllText(ofd.FileName);
+
+                generatedTests =
+                    JsonSerializer.Deserialize<List<TestInstance>>(json);
+
+                if (generatedTests == null)
+                {
+                    generatedTests = new List<TestInstance>();
+
+                    MessageBox.Show("Nie uda³o siê wczytaæ danych.");
+                    return;
+                }
+
+                MessageBox.Show(
+                    $"Wczytano {generatedTests.Count} instancji.");
+            }
+            button5.Enabled = true;
+            button6.Enabled = true;
+        }
+
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+            textBox17.Visible = true;
+            textBox18.Visible = true;
+            label26.Visible = true;
+            label27.Visible = true;
+        }
+
+        /*GAResult[] results = new GAResult[testsCount];
+        string[] opt_seqs = new string[testsCount];
+
+        Parallel.For(0, testsCount, test =>
+        {
+            var generated = GenerateInstance(m, n, n_seq_opt, err_count);
+
+            opt_seqs[test] = generated.SeqOpt;
+
+            results[test] = RunGeneticAlgorithm(generated.Instance_local);
+        });
+
+        SaveCsv(m, n, err_count, opt_seqs.ToList(), results.ToList());
+
+        MessageBox.Show("Test zakoñczony.");
+    }
+    */
     }
 }

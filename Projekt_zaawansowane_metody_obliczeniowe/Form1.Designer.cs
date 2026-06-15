@@ -80,14 +80,22 @@
             chart1 = new System.Windows.Forms.DataVisualization.Charting.Chart();
             label24 = new Label();
             label25 = new Label();
+            button5 = new Button();
+            button6 = new Button();
+            button7 = new Button();
+            checkBox1 = new CheckBox();
+            textBox17 = new TextBox();
+            textBox18 = new TextBox();
+            label26 = new Label();
+            label27 = new Label();
             ((System.ComponentModel.ISupportInitialize)chart1).BeginInit();
             SuspendLayout();
             // 
             // button1
             // 
-            button1.Location = new Point(96, 249);
+            button1.Location = new Point(41, 248);
             button1.Name = "button1";
-            button1.Size = new Size(168, 46);
+            button1.Size = new Size(136, 46);
             button1.TabIndex = 0;
             button1.Text = "Generuj instancję";
             button1.UseVisualStyleBackColor = true;
@@ -97,7 +105,7 @@
             // 
             label1.AutoSize = true;
             label1.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 238);
-            label1.Location = new Point(137, 376);
+            label1.Location = new Point(137, 326);
             label1.Name = "label1";
             label1.Size = new Size(76, 20);
             label1.TabIndex = 1;
@@ -137,20 +145,20 @@
             // 
             // textBox3
             // 
-            textBox3.Location = new Point(12, 399);
+            textBox3.Location = new Point(15, 349);
             textBox3.Multiline = true;
             textBox3.Name = "textBox3";
             textBox3.ScrollBars = ScrollBars.Both;
-            textBox3.Size = new Size(369, 320);
+            textBox3.Size = new Size(349, 255);
             textBox3.TabIndex = 7;
             textBox3.Text = resources.GetString("textBox3.Text");
             textBox3.TextChanged += textBox3_TextChanged;
             // 
             // button2
             // 
-            button2.Location = new Point(96, 301);
+            button2.Location = new Point(183, 248);
             button2.Name = "button2";
-            button2.Size = new Size(168, 46);
+            button2.Size = new Size(148, 46);
             button2.TabIndex = 8;
             button2.Text = "Sprawdź instancję\r\n";
             button2.UseVisualStyleBackColor = true;
@@ -158,20 +166,20 @@
             // 
             // button3
             // 
+            button3.Enabled = false;
             button3.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 238);
-            button3.Location = new Point(734, 132);
+            button3.Location = new Point(728, 344);
             button3.Name = "button3";
-            button3.Size = new Size(299, 72);
+            button3.Size = new Size(299, 52);
             button3.TabIndex = 9;
             button3.Text = "Uruchom algorytm genetyczny";
             button3.UseVisualStyleBackColor = true;
-            button3.Visible = false;
             button3.Click += button3_Click;
             // 
             // label2
             // 
             label2.AutoSize = true;
-            label2.Location = new Point(96, 350);
+            label2.Location = new Point(184, 297);
             label2.Name = "label2";
             label2.Size = new Size(162, 20);
             label2.TabIndex = 10;
@@ -212,9 +220,9 @@
             // 
             // buttonPause
             // 
-            buttonPause.Location = new Point(886, 132);
+            buttonPause.Location = new Point(880, 345);
             buttonPause.Name = "buttonPause";
-            buttonPause.Size = new Size(146, 72);
+            buttonPause.Size = new Size(146, 50);
             buttonPause.TabIndex = 15;
             buttonPause.Text = "Pauza";
             buttonPause.UseVisualStyleBackColor = true;
@@ -223,9 +231,9 @@
             // 
             // buttonStop
             // 
-            buttonStop.Location = new Point(734, 132);
+            buttonStop.Location = new Point(728, 344);
             buttonStop.Name = "buttonStop";
-            buttonStop.Size = new Size(146, 72);
+            buttonStop.Size = new Size(146, 50);
             buttonStop.TabIndex = 16;
             buttonStop.Text = "Stop";
             buttonStop.UseVisualStyleBackColor = true;
@@ -235,7 +243,7 @@
             // label7
             // 
             label7.AutoSize = true;
-            label7.Location = new Point(734, 209);
+            label7.Location = new Point(728, 405);
             label7.Name = "label7";
             label7.Size = new Size(0, 20);
             label7.TabIndex = 17;
@@ -340,7 +348,7 @@
             // 
             label13.AutoSize = true;
             label13.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 238);
-            label13.Location = new Point(464, 5);
+            label13.Location = new Point(446, 4);
             label13.Name = "label13";
             label13.Size = new Size(197, 20);
             label13.TabIndex = 27;
@@ -349,7 +357,7 @@
             // label14
             // 
             label14.AutoSize = true;
-            label14.Location = new Point(414, 31);
+            label14.Location = new Point(396, 30);
             label14.Name = "label14";
             label14.Size = new Size(247, 20);
             label14.TabIndex = 28;
@@ -358,7 +366,7 @@
             // label15
             // 
             label15.AutoSize = true;
-            label15.Location = new Point(414, 84);
+            label15.Location = new Point(396, 83);
             label15.Name = "label15";
             label15.Size = new Size(273, 20);
             label15.TabIndex = 29;
@@ -367,115 +375,115 @@
             // label16
             // 
             label16.AutoSize = true;
-            label16.Location = new Point(414, 137);
+            label16.Location = new Point(396, 136);
             label16.Name = "label16";
             label16.Size = new Size(290, 40);
             label16.TabIndex = 30;
-            label16.Text = "Prawdopodobieństwo wystąpienia mutacji\r\n(domyślnie 0.01):";
+            label16.Text = "Prawdopodobieństwo wystąpienia mutacji\r\n(domyślnie 0,0003):";
             // 
             // label17
             // 
             label17.AutoSize = true;
-            label17.Location = new Point(414, 210);
+            label17.Location = new Point(396, 209);
             label17.Name = "label17";
             label17.Size = new Size(260, 40);
             label17.TabIndex = 31;
-            label17.Text = "Procent osobników pozostawianych w\r\npopulacji (domyślnie 0.2):";
+            label17.Text = "Procent osobników pozostawianych w\r\npopulacji (domyślnie 0,25):";
             // 
             // label18
             // 
             label18.AutoSize = true;
-            label18.Location = new Point(414, 283);
+            label18.Location = new Point(396, 282);
             label18.Name = "label18";
             label18.Size = new Size(302, 40);
             label18.TabIndex = 32;
-            label18.Text = "Presja reprodukcyjna (premiowanie lepszych\r\nosobników; domyślnie 2.0):";
+            label18.Text = "Presja reprodukcyjna (premiowanie lepszych\r\nosobników; domyślnie 15,0):";
             // 
             // label19
             // 
             label19.AutoSize = true;
-            label19.Location = new Point(414, 356);
+            label19.Location = new Point(396, 355);
             label19.Name = "label19";
             label19.Size = new Size(287, 40);
             label19.TabIndex = 33;
-            label19.Text = "Liczba prób wydłużania nowego osobnika\r\n(domyślnie 5):";
+            label19.Text = "Liczba prób wydłużania nowego osobnika\r\n(domyślnie 2):";
             // 
             // textBox10
             // 
-            textBox10.Location = new Point(414, 54);
+            textBox10.Location = new Point(396, 53);
             textBox10.Name = "textBox10";
             textBox10.Size = new Size(302, 27);
             textBox10.TabIndex = 34;
             // 
             // textBox11
             // 
-            textBox11.Location = new Point(414, 107);
+            textBox11.Location = new Point(396, 106);
             textBox11.Name = "textBox11";
             textBox11.Size = new Size(302, 27);
             textBox11.TabIndex = 35;
             // 
             // textBox12
             // 
-            textBox12.Location = new Point(414, 180);
+            textBox12.Location = new Point(396, 179);
             textBox12.Name = "textBox12";
             textBox12.Size = new Size(302, 27);
             textBox12.TabIndex = 36;
             // 
             // textBox13
             // 
-            textBox13.Location = new Point(414, 253);
+            textBox13.Location = new Point(396, 252);
             textBox13.Name = "textBox13";
             textBox13.Size = new Size(302, 27);
             textBox13.TabIndex = 37;
             // 
             // textBox14
             // 
-            textBox14.Location = new Point(414, 326);
+            textBox14.Location = new Point(396, 325);
             textBox14.Name = "textBox14";
             textBox14.Size = new Size(302, 27);
             textBox14.TabIndex = 38;
             // 
             // textBox15
             // 
-            textBox15.Location = new Point(414, 399);
+            textBox15.Location = new Point(396, 398);
             textBox15.Name = "textBox15";
             textBox15.Size = new Size(302, 27);
             textBox15.TabIndex = 39;
             // 
             // button4
             // 
-            button4.Location = new Point(734, 54);
+            button4.Location = new Point(727, 210);
             button4.Name = "button4";
-            button4.Size = new Size(299, 72);
+            button4.Size = new Size(146, 68);
             button4.TabIndex = 40;
-            button4.Text = "Puść test\r\n(10 uruchomień na różnych instancjach)";
+            button4.Text = "Utwórz instancje testowe\r\n(10 instancji)";
             button4.UseVisualStyleBackColor = true;
             button4.Click += button4_Click;
             // 
             // label20
             // 
             label20.AutoSize = true;
-            label20.Location = new Point(730, 276);
+            label20.Location = new Point(12, 623);
             label20.Name = "label20";
-            label20.Size = new Size(244, 20);
+            label20.Size = new Size(191, 20);
             label20.TabIndex = 41;
-            label20.Text = "Sekwencja optymalna z generatora:";
+            label20.Text = "Dopasowanie z generatora:";
             label20.Visible = false;
             // 
             // label22
             // 
             label22.AutoSize = true;
-            label22.Location = new Point(734, 370);
+            label22.Location = new Point(15, 702);
             label22.Name = "label22";
-            label22.Size = new Size(240, 40);
+            label22.Size = new Size(248, 20);
             label22.TabIndex = 43;
-            label22.Text = "Rozmiar rozwiązania optymalnego\r\nz generatora:";
+            label22.Text = "Rozmiar dopasowania z generatora:";
             label22.Visible = false;
             // 
             // label23
             // 
             label23.AutoSize = true;
-            label23.Location = new Point(828, 390);
+            label23.Location = new Point(259, 701);
             label23.Name = "label23";
             label23.Size = new Size(87, 20);
             label23.TabIndex = 44;
@@ -484,12 +492,12 @@
             // 
             // textBox16
             // 
-            textBox16.Location = new Point(734, 310);
+            textBox16.Location = new Point(15, 646);
             textBox16.Multiline = true;
             textBox16.Name = "textBox16";
             textBox16.ReadOnly = true;
             textBox16.ScrollBars = ScrollBars.Horizontal;
-            textBox16.Size = new Size(299, 50);
+            textBox16.Size = new Size(349, 50);
             textBox16.TabIndex = 45;
             textBox16.Visible = false;
             textBox16.WordWrap = false;
@@ -512,13 +520,13 @@
             legend1.Enabled = false;
             legend1.Name = "Legend1";
             chart1.Legends.Add(legend1);
-            chart1.Location = new Point(414, 439);
+            chart1.Location = new Point(370, 439);
             chart1.Name = "chart1";
             series1.ChartArea = "ChartArea1";
             series1.Legend = "Legend1";
             series1.Name = "Series1";
             chart1.Series.Add(series1);
-            chart1.Size = new Size(619, 280);
+            chart1.Size = new Size(674, 294);
             chart1.TabIndex = 47;
             chart1.Text = "chart1";
             chart1.Visible = false;
@@ -527,7 +535,7 @@
             // 
             label24.AutoSize = true;
             label24.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 238);
-            label24.Location = new Point(828, 5);
+            label24.Location = new Point(821, 183);
             label24.Name = "label24";
             label24.Size = new Size(123, 20);
             label24.TabIndex = 48;
@@ -543,11 +551,99 @@
             label25.Text = "Aktualna populacja:";
             label25.Visible = false;
             // 
+            // button5
+            // 
+            button5.Enabled = false;
+            button5.Location = new Point(880, 210);
+            button5.Name = "button5";
+            button5.Size = new Size(146, 68);
+            button5.TabIndex = 50;
+            button5.Text = "Uruchom test\r\n(na 10 instancjach testowych)";
+            button5.UseVisualStyleBackColor = true;
+            button5.Click += button5_Click;
+            // 
+            // button6
+            // 
+            button6.Enabled = false;
+            button6.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 238);
+            button6.Location = new Point(728, 284);
+            button6.Name = "button6";
+            button6.Size = new Size(146, 54);
+            button6.TabIndex = 51;
+            button6.Text = "Zapisz instancje testowe do pliku";
+            button6.UseVisualStyleBackColor = true;
+            button6.Click += button6_Click;
+            // 
+            // button7
+            // 
+            button7.Location = new Point(880, 284);
+            button7.Name = "button7";
+            button7.Size = new Size(146, 54);
+            button7.TabIndex = 52;
+            button7.Text = "Wczytaj instancje testowe z pliku";
+            button7.UseVisualStyleBackColor = true;
+            button7.Click += button7_Click;
+            // 
+            // checkBox1
+            // 
+            checkBox1.AutoSize = true;
+            checkBox1.Location = new Point(727, 28);
+            checkBox1.Name = "checkBox1";
+            checkBox1.Size = new Size(308, 64);
+            checkBox1.TabIndex = 53;
+            checkBox1.Text = "Czy automatyczna zmiana wartości\r\nprawdopodobieństwa mutacji na większą,\r\ngdy przestój?";
+            checkBox1.UseVisualStyleBackColor = true;
+            checkBox1.CheckedChanged += checkBox1_CheckedChanged;
+            // 
+            // textBox17
+            // 
+            textBox17.Location = new Point(727, 138);
+            textBox17.Name = "textBox17";
+            textBox17.Size = new Size(160, 27);
+            textBox17.TabIndex = 54;
+            textBox17.Visible = false;
+            // 
+            // textBox18
+            // 
+            textBox18.Location = new Point(893, 138);
+            textBox18.Name = "textBox18";
+            textBox18.Size = new Size(136, 27);
+            textBox18.TabIndex = 55;
+            textBox18.Visible = false;
+            // 
+            // label26
+            // 
+            label26.AutoSize = true;
+            label26.Location = new Point(727, 95);
+            label26.Name = "label26";
+            label26.Size = new Size(147, 40);
+            label26.TabIndex = 56;
+            label26.Text = "Tymczasowa wartość\r\n(domyślnie 0,004):";
+            label26.Visible = false;
+            // 
+            // label27
+            // 
+            label27.AutoSize = true;
+            label27.Location = new Point(893, 95);
+            label27.Name = "label27";
+            label27.Size = new Size(128, 40);
+            label27.TabIndex = 57;
+            label27.Text = "Długość przestoju\r\n(domyślnie 20):";
+            label27.Visible = false;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1462, 745);
+            Controls.Add(label27);
+            Controls.Add(label26);
+            Controls.Add(textBox18);
+            Controls.Add(textBox17);
+            Controls.Add(checkBox1);
+            Controls.Add(button7);
+            Controls.Add(button6);
+            Controls.Add(button5);
             Controls.Add(label25);
             Controls.Add(label24);
             Controls.Add(chart1);
@@ -597,7 +693,7 @@
             Controls.Add(label1);
             Controls.Add(button1);
             Name = "Form1";
-            Text = "Form1";
+            Text = "Algorytm genetyczny dla problemu minimalnego bezbłędnego dopasowania sekwencji";
             ((System.ComponentModel.ISupportInitialize)chart1).EndInit();
             ResumeLayout(false);
             PerformLayout();
@@ -653,5 +749,13 @@
         private System.Windows.Forms.DataVisualization.Charting.Chart chart1;
         private Label label24;
         private Label label25;
+        private Button button5;
+        private Button button6;
+        private Button button7;
+        private CheckBox checkBox1;
+        private TextBox textBox17;
+        private TextBox textBox18;
+        private Label label26;
+        private Label label27;
     }
 }
